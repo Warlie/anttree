@@ -65,8 +65,8 @@ de.auster_gmbh.library.xml_util = {
   // Known ontology namespaces that qPortal omits from the serialized <rdf:RDF> root
   // because they lack a registered NameSpace_factory entry.
   _knownNS: {
-    'person': 'http://www.auster-gmbh.de/ontologies/person#',
-    'gender': 'http://www.auster-gmbh.de/ontologies/gender#'
+    'person': 'http://www.auster-gmbh.de/ontologies/person',
+    'gender': 'http://www.auster-gmbh.de/ontologies/gender'
   },
   fixMissingNamespaces: function(text) {
     const rdfRDFPattern = /(<rdf:RDF\b[^>]*>)/;
