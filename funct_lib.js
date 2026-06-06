@@ -437,6 +437,25 @@ de.auster_gmbh.library.tools.tripleElement.const.TEXT_ELEMENT = 3;
 					alert(err.message);
     				}
 */
+// Connections deferred because the target object wasn't registered yet at processing time.
+// Resolved after all ontologies are built via resolvePendingConnections().
+de.auster_gmbh.library.tools.pendingConnections = [];
+
+de.auster_gmbh.library.tools.resolvePendingConnections = function() {
+	var remaining = [];
+	de.auster_gmbh.library.tools.pendingConnections.forEach(function(p) {
+		try {
+			var objSem = de.auster_gmbh.semanticelement.semantic_web.getObjByRepresentationObj(p.objectURI);
+			de.auster_gmbh.semanticelement.semantic_web.setManuallyGraph(p.subject, p.predicate, objSem);
+		} catch(e) {
+			remaining.push(p);
+		}
+	});
+	if(remaining.length > 0)
+		console.warn('[pending] ' + remaining.length + ' connection(s) still unresolved:', remaining.map(function(p){ return p.objectURI; }));
+	de.auster_gmbh.library.tools.pendingConnections = remaining;
+};
+
 de.auster_gmbh.library.tools.triplesToGrid = function (setOfTriple, parent)
 {
 	var subject = false;
@@ -488,7 +507,21 @@ de.auster_gmbh.library.tools.triplesToGrid = function (setOfTriple, parent)
 		
 		predicate.semObject = findProperElement(predicate);
 
-		if(object && predicate.handling == de.auster_gmbh.semanticelement.GRAPH)object.semObject = findProperElement(object);
+		if(object && predicate.handling == de.auster_gmbh.semanticelement.GRAPH) {
+			try {
+				object.semObject = findProperElement(object);
+			} catch(e) {
+				if(e instanceof de.auster_gmbh.library.error.NoObjectToDefinitionException
+				   && object.elementType == de.auster_gmbh.library.tools.tripleElement.const.ID_ELEMENT) {
+					de.auster_gmbh.library.tools.pendingConnections.push({
+						subject:    subject.semObject,
+						predicate:  predicate.semObject,
+						objectURI:  object.getResourceURI()
+					});
+					object.semObject = null;
+				} else throw e;
+			}
+		}
 		
 		if(!predicate.semObject)
 		{
@@ -1316,6 +1349,7 @@ Inhalt unklar, die Methode gehoert zu einem Object qPComObject
  	 		console.error('[build_structure] processing error:', e.errorText || e.message || e);
  	 	}
 
+		de.auster_gmbh.library.tools.resolvePendingConnections();
 		de.auster_gmbh.library.access.ajaxConnection.current_status = this.status.ready;
  	}
  	,
