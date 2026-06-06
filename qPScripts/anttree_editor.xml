@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding="ISO-8859-1"?>
+<indextree xmlns="http://www.trscript.de/tree">
+<final name="home" value="Anttree Editor">
+	<template>
+		<main case_folding="0" doctype="XML" doctype_out="XML" output_doc="anttree/template/anttree_layout.svg;output:one;modus:std">anttree/template/anttree_layout.svg</main>
+	</template>
+</final>
+</indextree>
