@@ -1302,8 +1302,9 @@ de.auster_gmbh.semanticelement.semantic_web.clazz = function()
 			mode = 1;
 			test.type += 0x30;
 			test.clazz = de.auster_gmbh.semanticelement[newClazzname];
+			test.aboutURI = newClazzname;
 			de.auster_gmbh.semanticelement[newClazzname].representation = test;
-			
+
 			if(parentClazzObj.getName() !='http://www.w3.org/2000/01/rdf-schema#Resource')
 			{
 				if(!parentClazzObj.baseClazz)console.error("There is no base class for this Objekct", parentClazzObj);
@@ -1331,7 +1332,8 @@ de.auster_gmbh.semanticelement.semantic_web.clazz = function()
  	de.auster_gmbh.semanticelement[newClazzname].prototype.input = new Array();
  	de.auster_gmbh.semanticelement[newClazzname].representation = test;
  	de.auster_gmbh.semanticelement[newClazzname].inherited = new Array();
- 	test.clazz = de.auster_gmbh.semanticelement[newClazzname]; 	
+ 	test.clazz = de.auster_gmbh.semanticelement[newClazzname];
+ 	test.aboutURI = newClazzname;
  	return de.auster_gmbh.semanticelement[newClazzname];
  	}
 
@@ -2341,11 +2343,8 @@ this.getLabelOf = function(obj) {
 */ 	
  	this.curNode = function(pointerNum)
  	{
- 	 	if(pointerNum == 1)
- 		return curelement.getName();
- 		else
- 		return curelement2.getName();
- 		
+ 	 	var el = (pointerNum == 1) ? curelement : curelement2;
+ 		return el.aboutURI || el.getName();
  	}
  	
 /*-----------------------------------------------------

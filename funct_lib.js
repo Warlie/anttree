@@ -1818,24 +1818,38 @@ de.auster_gmbh.library.controlelements.createPrimaryPanel =  function( arrayOfFi
 		
 		if( arrayOfFields[iter][5].length != 0 )
 		{
-		
+
 		mysvg = new de.auster_gmbh.graphicelement.svg.SVGImage(parentObj,pfad);
-			
+
 		mysvg.transit(50,90 + (iter * 60) - 10);
 		mysvg.setWayPoint(5 + moveingInPanel[1],35);
-		mysvg.setDimension(21,21); 
+		mysvg.setDimension(21,21);
 		mysvg.setImage('img/ontology.png');
-			
 
 		mysvg.setID(arrayOfFields[iter][5]);
 		mycontainer.add(mysvg);
+		moveingInPanel[1] += 30;
 		}
-		
+
+		if( arrayOfFields[iter][8] !== undefined && arrayOfFields[iter][8].length != 0 )
+		{
+
+		mysvg = new de.auster_gmbh.graphicelement.svg.SVGImage(parentObj,pfad);
+
+		mysvg.transit(50,90 + (iter * 60) - 10);
+		mysvg.setWayPoint(5 + moveingInPanel[1],35);
+		mysvg.setDimension(21,21);
+		mysvg.setImage('img/repr.png');
+
+		mysvg.setID(arrayOfFields[iter][8]);
+		mycontainer.add(mysvg);
+		}
+
 		moveingInPanel[1] = 0;
 		moveingInPanel[0] = 0;
 	//bottom end
 	}
-	
+
 
 		mysvg = new de.auster_gmbh.graphicelement.svg.SVGPath(parentObj,pfad);
 			
@@ -2054,17 +2068,30 @@ de.auster_gmbh.library.controlelements.createNPanel =  function( n , arrayOfFiel
 		if(  arrayOfFields[iter][5].length != 0  )
 		{
 		mysvg = new de.auster_gmbh.graphicelement.svg.SVGImage(parentObj,pfad);
-			
+
 		mysvg.transit(50 + addTextPadding + add_x,90 + (iter * 60) + add_y - moveingInPanel[0]);
 		mysvg.setWayPoint(5 + moveingInPanel[1],35);
-		mysvg.setDimension(21,21); 
+		mysvg.setDimension(21,21);
 		mysvg.setImage('img/ontology.png');
-			
 
 		mysvg.setID(arrayOfFields[iter][5]);
 		mycontainer.add(mysvg);
+		moveingInPanel[1] += 30;
 		}
-		
+
+		if( arrayOfFields[iter][8] !== undefined && arrayOfFields[iter][8].length != 0 )
+		{
+		mysvg = new de.auster_gmbh.graphicelement.svg.SVGImage(parentObj,pfad);
+
+		mysvg.transit(50 + addTextPadding + add_x,90 + (iter * 60) + add_y - moveingInPanel[0]);
+		mysvg.setWayPoint(5 + moveingInPanel[1],35);
+		mysvg.setDimension(21,21);
+		mysvg.setImage('img/repr.png');
+
+		mysvg.setID(arrayOfFields[iter][8]);
+		mycontainer.add(mysvg);
+		}
+
 		moveingInPanel[1] = 0;
 		moveingInPanel[0] = 0;
 	//bottom end
@@ -2135,15 +2162,18 @@ de.auster_gmbh.library.controlelements.create_graph_field =  function( message, 
 				many = semweb.childmany(1);
 				
 				secondaryObject = semweb.getRef1();
-				
+
 				dataArray[it][2] = '';
 				dataArray[it][3] = '';
 				dataArray[it][5] = '';
 				dataArray[it][6] = '';
 				dataArray[it][7] = semweb.givesIcon(1,false);
-				
+				dataArray[it][8] = (secondaryObject && secondaryObject.clazz &&
+				                    secondaryObject.clazz.representation !== undefined &&
+				                    secondaryObject.clazz.representation !== secondaryObject &&
+				                    secondaryObject.handling <= de.auster_gmbh.semanticelement.NODE)
+				                   ? 'repr_' + myid : '';
 
-				
 				if(many == 0)
 				{
 				
@@ -2306,13 +2336,17 @@ de.auster_gmbh.library.controlelements.create_graph_field =  function( message, 
 				dataArray[it][5] = '';
 				dataArray[it][6] = '';
 				dataArray[it][7] = semweb.givesIcon(1,false);
-				
-				
+				dataArray[it][8] = (semweb.getRef1() && semweb.getRef1().clazz &&
+				                    semweb.getRef1().clazz.representation !== undefined &&
+				                    semweb.getRef1().clazz.representation !== semweb.getRef1() &&
+				                    semweb.getRef1().handling <= de.auster_gmbh.semanticelement.NODE)
+				                   ? 'repr_' + myid : '';
+
 				if(many == 0)
 				{
-				
+
 					if(semweb.manyBagEntry(1) == 0)
-					{	
+					{
 					dataArray[it][1] = 'finpos_' + myid + '_' + (n + 1) ;
 					dataArray[it][2] = '' ;
 					}

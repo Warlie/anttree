@@ -1981,7 +1981,7 @@ helpvar.getNewBagEntryEvent  = function(event)
 	 				de.auster_gmbh.library.commonrefs.STDNODE,
 					this);
 					
-					symbol.setImage("img/missingSymbol.png");
+					symbol.setImage("img/questionmark.png");
 					}
 					
 					//
@@ -2054,7 +2054,7 @@ helpvar.getNewBagEntryEvent  = function(event)
 	 				de.auster_gmbh.library.commonrefs.STDNODE,
 					this);
 					
-					graphical_element.setImage("img/missingSymbol.png");
+					graphical_element.setImage("img/questionmark.png");
 			}
 			
 			if(graphical_element == undefined)continue;
@@ -2138,7 +2138,7 @@ helpvar.getNewBagEntryEvent  = function(event)
 	 				de.auster_gmbh.library.commonrefs.STDNODE,
 					this);
 					
-					graphical_element.setImage("img/missingSymbol.png");
+					graphical_element.setImage("img/questionmark.png");
 			}
 			
 			if(graphical_element == undefined)continue;
