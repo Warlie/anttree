@@ -136,7 +136,7 @@ de.auster_gmbh.library.tools.tripleElement = function (node,position)
 	if(node.nodeType == Node.ELEMENT_NODE)
 	{
 /*		
-		de.auster_gmbh.semanticelement.VALUE = 0;
+de.auster_gmbh.semanticelement.VALUE = 0;
 de.auster_gmbh.semanticelement.NODE = 1;
 de.auster_gmbh.semanticelement.GRAPH = 2;
 de.auster_gmbh.semanticelement.DEFINITION = 3;
@@ -144,12 +144,13 @@ de.auster_gmbh.semanticelement.TAG = 4;
 de.auster_gmbh.semanticelement.REF = 5;
 */
 		
-//console.info("ELEMENT_NODE", de.auster_gmbh.semanticelement.tools.showHandlingToURI(node.namespaceURI  + '#' +  node.localName));
+//console.info("ELEMENT_NODE", node.namespaceURI  + '#' +  node.localName,  de.auster_gmbh.semanticelement.tools.showHandlingToURI(node.namespaceURI  + '#' +  node.localName));
 		
 	for(var j = 0; j < node.attributes.length;j++)
 	{
-		
-	 		//console.debug(node.attributes[j].namespaceURI  + '#' +  node.attributes[j].localName , de.auster_gmbh.semanticelement.tools.showHandlingToURI(node.attributes[j].namespaceURI  + '#' +  node.attributes[j].localName), this.handling);
+			//uri = node.attributes[j].namespaceURI  + '#' +  node.attributes[j].localName;
+	 		//console.debug("about", uri, de.auster_gmbh.semanticelement.tools.showHandlingToURI(uri), this.handling);
+	 		//console.debug(de.auster_gmbh.semanticelement.tools.showHandlingToURI(node.attributes[j].namespaceURI  + '#' +  node.attributes[j].localName), de.auster_gmbh.semanticelement.DEFINITION)
 	 		if(de.auster_gmbh.semanticelement.tools.showHandlingToURI(node.attributes[j].namespaceURI  + '#' +  node.attributes[j].localName) == de.auster_gmbh.semanticelement.DEFINITION)
 	 		{
 
@@ -164,7 +165,13 @@ de.auster_gmbh.semanticelement.REF = 5;
 
 
 	 		//if(position == de.auster_gmbh.library.tools.tripleElement.const.PREDICATE)
-	 			
+
+		// BUG: Wenn kein rdf:about vorhanden ist, bleibt elementType=2 (ANONYM_ELEMENT),
+		// obwohl baseURI eine bekannte, registrierte URI ist (z.B. person:NaturalPerson als Bag-Prädikat).
+		// FIX-IDEE: elementType=1 setzen wenn handling==NODE && representation existiert.
+		// PROBLEM: .representation zeigt auf das erste Individuum des Typs, nicht auf die Klasse selbst.
+		// Folge: addBag(..., representation) akkumuliert alle Tags auf dem ersten Objekt des Typs.
+
 	if((position == constants.PREDICATE || position == constants.OBJECT ) &&
 	   (this.handling == de.auster_gmbh.semanticelement.NODE ||
 	    this.handling == de.auster_gmbh.semanticelement.GRAPH ||
@@ -229,8 +236,8 @@ de.auster_gmbh.semanticelement.REF = 5;
 
 	
 	//console.debug(first_node);
-
-
+//if(this.handling == de.auster_gmbh.semanticelement.DEFINITION || this.handling == de.auster_gmbh.semanticelement.NODE)
+//	console.debug(node,position, this.handling);
 }
 de.auster_gmbh.library.tools.tripleElement.const = {};
 de.auster_gmbh.library.tools.tripleElement.const.SUBJECT = -3;
@@ -260,7 +267,7 @@ de.auster_gmbh.library.tools.xmlToTriple = function (node)
 		if(handling != de.auster_gmbh.semanticelement.NODE && handling != de.auster_gmbh.semanticelement.GRAPH && handling != de.auster_gmbh.semanticelement.XMLELEMENT)
 			return false;
 
-	//console.debug(first_node);
+
 		return new de.auster_gmbh.library.tools.tripleElement( first_node, constants.SUBJECT);
 	}
 	
@@ -353,7 +360,7 @@ if(third_node.nodeType == Node.ELEMENT_NODE ||
 	// this if is about  nodeType Element_Node
 if(node.nodeType == Node.ELEMENT_NODE)
 {	
-
+	
 /* check first element to be a usable node */
 if(subject = checkFirstElement(node))
 {
@@ -445,6 +452,7 @@ de.auster_gmbh.library.tools.resolvePendingConnections = function() {
 	var remaining = [];
 	de.auster_gmbh.library.tools.pendingConnections.forEach(function(p) {
 		try {
+			console.info(p.objectURI);
 			var objSem = de.auster_gmbh.semanticelement.semantic_web.getObjByRepresentationObj(p.objectURI);
 			de.auster_gmbh.semanticelement.semantic_web.setManuallyGraph(p.subject, p.predicate, objSem);
 		} catch(e) {
@@ -466,14 +474,17 @@ de.auster_gmbh.library.tools.triplesToGrid = function (setOfTriple, parent)
 				
 		if(triple_element.elementType == de.auster_gmbh.library.tools.tripleElement.const.ID_ELEMENT)
 		{
-			//console.debug("id ", triple_element.getResourceURI());
 			return de.auster_gmbh.semanticelement.semantic_web.getObjByRepresentationObj(triple_element.getResourceURI());
 		}
-		
+
 		if(triple_element.elementType == de.auster_gmbh.library.tools.tripleElement.const.ANONYM_ELEMENT)
 		{
-			//console.debug(triple_element);
-			//console.debug("A ", triple_element.getResourceURI());
+			// BUG: getObjecttoClazz erzeugt bei jedem Aufruf eine neue Instanz.
+			// Für bekannte Klassen-URIs (z.B. person:NaturalPerson als Bag-Prädikat) entsteht
+			// so eine Phantom-Instanz pro Triple statt Verwendung der kanonischen Repräsentation.
+			// FIX-IDEE: für handling==NODE + bekannte URI → getObjByRepresentationObj verwenden.
+			// PROBLEM: .representation ist das erste Individuum, nicht die Klasse → alle Tags
+			// landen auf dem ersten Objekt des Typs. Lösung muss tiefer ansetzen.
 			return de.auster_gmbh.semanticelement.semantic_web.getObjecttoClazz(triple_element.getResourceURI());
 		}
 	}
@@ -552,7 +563,13 @@ de.auster_gmbh.library.tools.triplesToGrid = function (setOfTriple, parent)
 			else
 			{
 
-			de.auster_gmbh.semanticelement.semantic_web.setManuallyGraph(subject.semObject,predicate.semObject, object.semObject);
+			try {
+				de.auster_gmbh.semanticelement.semantic_web.setManuallyGraph(subject.semObject,predicate.semObject, object.semObject);
+			} catch(e) {
+				if(e instanceof de.auster_gmbh.library.error.ViolatesPropertyRestrictionException)
+					console.warn('[setManuallyGraph] validation failed:', e.errorText || e.message, '| subject.superObj:', subject.semObject && subject.semObject.superObj && subject.semObject.superObj.getName ? subject.semObject.superObj.getName() : 'undefined', '\n', e.stack);
+				else throw e;
+			}
 
 			if(predicate.subTree)
 				de.auster_gmbh.library.tools.triplesToGrid(predicate.subTree, predicate.semObject);
@@ -1341,12 +1358,12 @@ Inhalt unklar, die Methode gehoert zu einem Object qPComObject
  	{
  	 var dataevent = new de.auster_gmbh.library.tools.eventObject('de.auster_gmbh.library.access.ajaxConnection.request',  this.http ,this.xmlList[this.xmlList.length - 1]);
 
- 	 	try {
- 	 		for( var k in this.Observer ){
+ 	 	for( var k in this.Observer ){
+ 	 		try {
  	 			this.Observer[k].fireEvent('Controlcenter.buildUp',dataevent);
+ 	 		} catch(e) {
+ 	 			console.error('[build_structure] processing error:', e.errorText || e.message || e, '\n', e.stack || '');
  	 		}
- 	 	} catch(e) {
- 	 		console.error('[build_structure] processing error:', e.errorText || e.message || e);
  	 	}
 
 		de.auster_gmbh.library.tools.resolvePendingConnections();
@@ -2172,7 +2189,7 @@ de.auster_gmbh.library.controlelements.create_graph_field =  function( message, 
 				                    secondaryObject.clazz.representation !== undefined &&
 				                    secondaryObject.clazz.representation !== secondaryObject &&
 				                    secondaryObject.handling <= de.auster_gmbh.semanticelement.NODE)
-				                   ? 'repr_' + myid : '';
+				                   ? 'repr_' + myid + '_' + (n + 1) : '';
 
 				if(many == 0)
 				{
@@ -2340,7 +2357,7 @@ de.auster_gmbh.library.controlelements.create_graph_field =  function( message, 
 				                    semweb.getRef1().clazz.representation !== undefined &&
 				                    semweb.getRef1().clazz.representation !== semweb.getRef1() &&
 				                    semweb.getRef1().handling <= de.auster_gmbh.semanticelement.NODE)
-				                   ? 'repr_' + myid : '';
+				                   ? 'repr_' + myid + '_' + (n + 1) : '';
 
 				if(many == 0)
 				{
@@ -2696,62 +2713,67 @@ de.auster_gmbh.library.controlelements.create_graph_field =  function( message, 
  	{
  	var errno = 101;
  	this.errorText = "Definition '" + errordefinition + "' (" + NodeTypNum + ") does allready exist!";
- 	
+ 	this.stack = new Error(this.errorText).stack;
  	this.toString = function(){return errno + ':' + this.errorText;}
  	this.ErrNo = function(){errno; }
  	this.ErrorMessage = function(){ return this.errorText; }
  	}
- 	
+
  	de.auster_gmbh.library.error.RepresentationObjectMissedException = function(errordefinition)
  	{
  	var errno = 103;
  	this.errorText = "RepresentationObject in '" + errordefinition + "' is missed!";
- 	
+ 	this.stack = new Error(this.errorText).stack;
  	this.toString = function(){return errno + ':' + this.errorText;}
  	this.ErrNo = function(){errno; }
  	this.ErrorMessage = function(){ return this.errorText; }
  	}
- 	
+
  	de.auster_gmbh.library.error.NoObjectToDefinitionException = function(errordefinition)
  	{
  	var errno = 102;
  	this.errorText = "There is no object to '" + errordefinition + "'!";
+ 	this.stack = new Error(this.errorText).stack;
  	this.toString = function(){return errno + ':' + this.errorText;}
  	this.ErrNo = function(){ return errno; }
   	this.ErrorMessage = function(){ return this.errorText; }
  	}
- 	
+
  	de.auster_gmbh.library.error.ArgumentIsMissingException = function(errordefinition)
  	{
  	var errno = 105;
  	this.errorText = "missing Argument: '" + errordefinition + "'!";
+ 	this.stack = new Error(this.errorText).stack;
  	this.toString = function(){return errno + ':' + this.errorText;}
  	this.ErrNo = function(){ return errno; }
   	this.ErrorMessage = function(){ return this.errorText; }
  	}
- 	
+
  	de.auster_gmbh.library.error.RecordsetEOFException = function(errordefinition)
  	{
  	var errno = 200;
  	this.errorText = "position in recordset is not valid: '" + errordefinition + "'!";
+ 	this.stack = new Error(this.errorText).stack;
  	this.toString = function(){return errno + ':' + this.errorText;}
  	this.ErrNo = function(){ return errno; }
   	this.ErrorMessage = function(){ return this.errorText; }
  	}
- 	
+
  	de.auster_gmbh.library.error.RecordsetWrongKeyException = function(errordefinition)
  	{
  	var errno = 201;
  	this.errorText = "key in recordset is not valid: '" + errordefinition + "'!";
+ 	this.stack = new Error(this.errorText).stack;
  	this.toString = function(){return errno + ':' + this.errorText;}
  	this.ErrNo = function(){ return errno; }
   	this.ErrorMessage = function(){ return this.errorText; }
  	}
- 	
+
  	de.auster_gmbh.library.error.ViolatesPropertyRestrictionException = function(errordefinition)
  	{
  	var errno = 302;
  	this.errorText = "Deviation from the definition of a property has occurred: '" + errordefinition + "'!";
+ 	this.stack = new Error(this.errorText).stack;
  	this.toString = function(){return errno + ':' + this.errorText;}
  	this.ErrNo = function(){ return errno; }
   	this.ErrorMessage = function(){ return this.errorText; }

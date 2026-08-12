@@ -51,6 +51,27 @@
 	
 	de.auster_gmbh.semanticelement.semantic_web.setGraphLiteral(2,'http://www.w3.org/2000/01/rdf-schema#label','rdfs:Class');
 	de.auster_gmbh.semanticelement.semantic_web.setGraphLiteral(2,'http://www.w3.org/2000/01/rdf-schema#comment','basic Class');
+	
+	de.auster_gmbh.semanticelement.semantic_web.setBehavior(2,
+ 	function(som)
+ 	{
+ 		
+ 		var mysom = som;  		
+  	
+		som.currentObject.clazz.prototype.isOneOf = function(uri)
+	{
+		console.debug("Class");
+		if(this.name == uri) return true;
+		return false;
+	}
+		
+	som.currentObject.clazz.prototype.collectClasses = function(avoidObjects)
+	{
+		return [this];
+	}
+		
+	});
+	
 	//de.auster_gmbh.semanticelement.semantic_web.showCurrentElements();
 	de.auster_gmbh.semanticelement.semantic_web.swappointer();
 	
@@ -126,6 +147,17 @@
 	'http://www.w3.org/1999/02/22-rdf-syntax-ns#Property');
 	de.auster_gmbh.semanticelement.semantic_web.setClazztype('http://www.w3.org/2000/01/rdf-schema#domain'
 	,de.auster_gmbh.semanticelement.const.SEMANTIC_ATTRIB);
+	// curelement2 steht hier auf dem rdfs:domain-Repraesentanten (Prototype aller Per-Kanten-Instanzen).
+	// getOwnedInstanceEvent feuert in setManuallyGraph mit dem aufgeloesten Ziel (Object2) als requester.
+	de.auster_gmbh.semanticelement.semantic_web.setBehavior(2,
+	function(som)
+	{
+		som.currentObject.getOwnedInstanceEvent = function(name, obj)
+		{
+			console.debug('[domain.getOwnedInstanceEvent] this=', this,' in=', this.getName() ,' name=', name, ' requester=', obj && obj.getRequester ? obj.getRequester() : obj);
+			//console.debug(this.
+		};
+	});
 	de.auster_gmbh.semanticelement.semantic_web.createFullBagEntry(
 	1,
 	'http://www.w3.org/1999/02/22-rdf-syntax-ns#Property',
@@ -135,6 +167,21 @@
 	'http://www.w3.org/1999/02/22-rdf-syntax-ns#Property');
 	de.auster_gmbh.semanticelement.semantic_web.setClazztype('http://www.w3.org/2000/01/rdf-schema#range'
 	,de.auster_gmbh.semanticelement.const.SEMANTIC_ATTRIB);
+	// dito fuer rdfs:range
+	de.auster_gmbh.semanticelement.semantic_web.setBehavior(2,
+	function(som)
+	{
+		som.currentObject.getOwnedInstanceEvent = function(name, obj)
+		{
+			console.debug('[range.getOwnedInstanceEvent] this=', this,' in=', this.getName() , ' name=', name, ' requester=', obj && obj.getRequester ? obj.getRequester() : obj);
+			console.debug('[range.getOwnedInstanceEvent]', this.bag);
+		};
+		som.currentObject.getNewBagEntryEvent = function(name, obj)
+		{
+
+			console.debug('[range.getNewBagEntryEvent]', this.bag);
+		}; 
+	});
 
 	de.auster_gmbh.semanticelement.semantic_web.createFullBagEntry(
 	1,

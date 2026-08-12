@@ -417,6 +417,37 @@
  	
  	 de.auster_gmbh.semanticelement.semantic_web.rootNode(1);*/
 
- 	 
+
  	 //de.auster_gmbh.semanticelement.tools.check_unset();
+
+/*
+ * owl:Class extension — class-level subclass check.
+ *
+ * Traverses only rdfs:subClassOf edges (pure OWL class hierarchy).
+ * Intentionally does NOT follow superObj — that chain leads to
+ * metaclasses (owl:Class → rdfs:Class → rdfs:Resource), not the
+ * domain-class hierarchy we need for property validation.
+ *
+ * Called on a class representation node, not on individuals.
+ * Example: NaturalPerson.representation.isSubClassOf('re:Person')
+ */
+de.auster_gmbh.semanticelement['http://www.w3.org/2002/07/owl#Class'].prototype.isSubClassOf = function(uri) {
+	var SUBCLASSOF = 'http://www.w3.org/2000/01/rdf-schema#subClassOf';
+	var visited = new Set();
+	var queue = [this];
+	while (queue.length > 0) {
+		var el = queue.shift();
+		if (!el || visited.has(el)) continue;
+		visited.add(el);
+		if (el.name === uri) return true;
+		var edges = el.output && el.output[SUBCLASSOF];
+		if (edges) {
+			for (var i = 0; i < edges.length; i++) {
+				var succ = edges[i] && edges[i].successor;
+				if (succ && !visited.has(succ)) queue.push(succ);
+			}
+		}
+	}
+	return false;
+};
  	 

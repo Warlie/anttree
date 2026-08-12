@@ -511,31 +511,49 @@
   			
   			if(message.id.substr(0, 6) == 'finpos')
   			{
-  				
+
   			var div = message.id.lastIndexOf('_');
   			var num = parseInt(message.id.substr(7, div - 7));
   			var n = parseInt(message.id.substr(div + 1,message.id.length - (div + 1)));
   			var value;
-  			
-  				
+
+
   				this.semref.findID(1,num);
-  			
+
   			var list = this.semref.refIndex();
-  				
+
 			var nodemany = list.length;
 			var help = new Array();
-			
-			var eventobj = new de.auster_gmbh.library.tools.eventObject('',this,num);
-			
-				this.controlref.fireEvent('[*/JSControl].setID&[*/JSControl].onFocus',eventobj);
-  				
-  			
-  			
-  			
-  			}
-  			
 
-  			
+			var eventobj = new de.auster_gmbh.library.tools.eventObject('',this,num);
+
+				this.controlref.fireEvent('[*/JSControl].setID&[*/JSControl].onFocus',eventobj);
+
+
+
+
+  			}
+
+  			if(message.id.substr(0, 5) == 'repr_')
+  			{
+  				var div = message.id.lastIndexOf('_');
+  				var num = parseInt(message.id.substr(5, div - 5));
+  				var n = parseInt(message.id.substr(div + 1));
+  				this.semref.findID(1, num);
+  				
+  				console.debug(this.semref.getRef1().representation);
+  				console.debug(this.semref.getRef1());
+  				
+  				var repr = this.semref.getRef1().clazz && this.semref.getRef1().clazz.representation;
+  				console.debug(repr);
+  				if(!repr) return true;
+  				this.semref.setRef1(repr);
+  				de.auster_gmbh.library.controlelements.buildNPanel(this.semref, this.mySVGObj, this.pfad, this, 0, n, this.graphsOn);
+  				var eventobj = new de.auster_gmbh.library.tools.eventObject('', this, repr.innerID);
+  				this.controlref.fireEvent('[*/JSControl].setID', eventobj);
+  			}
+
+
   		}
   
   		if(type == 'init')
@@ -594,14 +612,16 @@
   	/* onFocus */
   	this.onFocus = function()
   	{
+  		if(!this.container || !this.container[0]) return;
   		if(!de.auster_gmbh.controllelement_toolbox.tools.bar_status(this.container))
   		de.auster_gmbh.controllelement_toolbox.tools.openControl(this.container);
   	}
-  	
-  	 
+
+
   	/* onCollapse */
   	this.onCollapse = function()
   	{
+  		if(!this.container || !this.container[0]) return;
   		if(de.auster_gmbh.controllelement_toolbox.tools.bar_status(this.container))
   		de.auster_gmbh.controllelement_toolbox.tools.openControl(this.container);
   	}
@@ -1060,14 +1080,16 @@
   	/* onFocus */
   	this.onFocus = function()
   	{
+  		if(!this.container || !this.container[0]) return;
   		if(!de.auster_gmbh.controllelement_toolbox.tools.bar_status(this.container))
   		de.auster_gmbh.controllelement_toolbox.tools.openControl(this.container);
   	}
-  	
-  	 
+
+
   	/* onCollapse */
   	this.onCollapse = function()
   	{
+  		if(!this.container || !this.container[0]) return;
   		if(de.auster_gmbh.controllelement_toolbox.tools.bar_status(this.container))
   		de.auster_gmbh.controllelement_toolbox.tools.openControl(this.container);
   	}
@@ -1740,14 +1762,16 @@
   	/* onFocus */
   	this.onFocus = function()
   	{
+  		if(!this.container || !this.container[0]) return;
   		if(!de.auster_gmbh.objectelement_toolbox.tools.bar_status(this.container))
   		de.auster_gmbh.objectelement_toolbox.tools.open_bar(this.container);
   	}
-  	
-  	 
+
+
   	/* onCollapse */
   	this.onCollapse = function()
   	{
+  		if(!this.container || !this.container[0]) return;
   		if(de.auster_gmbh.objectelement_toolbox.tools.bar_status(this.container))
   		de.auster_gmbh.objectelement_toolbox.tools.open_bar(this.container);
   	}

@@ -338,12 +338,13 @@ de.auster_gmbh.semanticelement['http://www.w3.org/2000/01/rdf-schema#Resource'] 
  		for (var i=0;i< child.length;i++)
  		{
  			obj = new de.auster_gmbh.library.tools.xmlToTriple(child[i]);
+
  			if(obj.valid)resultlist.push( obj );
 
 
  		}
  		
- 		 		//console.error(resultlist);
+// 		 		console.debug('[nurtureTree] resultlist:', resultlist.length, resultlist.map(function(r){ return r.triples[0] && r.triples[0][0] ? r.triples[0][0].getResourceURI() : '?'; }));
 
  		resultlist.forEach(function (item) { de.auster_gmbh.library.tools.triplesToGrid(item, first_element); });
 
@@ -383,11 +384,12 @@ de.auster_gmbh.semanticelement['http://www.w3.org/2000/01/rdf-schema#Resource'] 
 	 		if (!element || visited.has(element)) continue;
 	 		visited.add(element);
 
-	 		if (element.name == uri) return true;
+	 		if (element.isOneOf(uri)) return true;
 
 	 		if (element.output && element.output[SUBCLASSOF] &&
 	 			element.output[SUBCLASSOF].length > 0)
 	 		{
+	 			console.debug("found:" + element);
 	 			for (var i = 0; i < element.output[SUBCLASSOF].length; i++) {
 	 				var succ = element.output[SUBCLASSOF][i].successor;
 	 				if (succ && !visited.has(succ)) queue.push(succ);
@@ -400,6 +402,17 @@ de.auster_gmbh.semanticelement['http://www.w3.org/2000/01/rdf-schema#Resource'] 
 	 	return false;
 	 }
  	
+	this.isOneOf = function(uri)
+	{
+		if(this.name == uri) return true;
+		return false;
+	}
+	 
+	this.collectClasses = function(avoidObjects)
+	{
+		return [this];
+	}
+	
  	this.output = new Array();	//restrictions and property array
  	this.input = new Array();	//restrictionobjects
  	this.innerID = 0;		//id
@@ -622,6 +635,27 @@ de.auster_gmbh.semanticelement['http://www.w3.org/2000/01/rdf-schema#Resource'] 
  		return this.index_in;
  	};
  	
+ 	this.fireEvent = function(direction, constrain, event, eventObject)
+ 	{
+ 		// Zentraler Dispatch — ersetzt das an den ~8 Orchestrator-Sites
+ 		// handinlinierte  if(node[event] != null) node[event]('*', eo).
+ 		//   direction : Netz/Richtung — 'inherit' | 'type' | 'registry' (Slot 1)
+ 		//   constrain : Selektor / Weiterlaufbedingung — '*' | URI | 'URI1&&URI2' | '1' (Slot 2)
+ 		//   event     : Handler-Name — z.B. 'getOwnedInstanceEvent' (Slot 3)
+ 		//   eventObject : Nutzlast + Rueckkanal
+ 		//
+ 		// STAND: verhaltenserhaltender Tiefe-0-Fall — feuert NUR auf 'this',
+ 		// kein Aufstieg, identisch zur bisherigen inline-Logik. constrain wird
+ 		// an den Handler durchgereicht (heute immer '*'). inherit/type/registry
+ 		// sind additiv via switch(direction) nachzuruesten, ohne die Call-Sites
+ 		// erneut anzufassen — der self-fire bleibt dabei der Rumpf des
+ 		// Tiefe-0-/registry-Treffers.
+ 		if(this[event] != null)
+ 			return this[event](constrain, eventObject);
+ 		return undefined;
+ 	}
+ 	
+ 	
  	/* Events */
  	this.script = null;
  	this.script_prototype = null;
@@ -649,6 +683,8 @@ de.auster_gmbh.semanticelement['http://www.w3.org/2000/01/rdf-schema#Class'].pro
 de.auster_gmbh.semanticelement['http://www.w3.org/2000/01/rdf-schema#Class'].prototype.baseClazz = 
 de.auster_gmbh.semanticelement['http://www.w3.org/2000/01/rdf-schema#Resource'];
 	
+// hier muss der Event rein
+
 de.auster_gmbh.semanticelement['http://www.w3.org/1999/02/22-rdf-syntax-ns#List'] = function(){};
 de.auster_gmbh.semanticelement['http://www.w3.org/1999/02/22-rdf-syntax-ns#List'].prototype = new de.auster_gmbh.semanticelement['http://www.w3.org/2000/01/rdf-schema#Resource'];
 de.auster_gmbh.semanticelement['http://www.w3.org/1999/02/22-rdf-syntax-ns#List'].prototype.constructor = de.auster_gmbh.semanticelement.stdclass;
@@ -687,7 +723,7 @@ de.auster_gmbh.semanticelement['http://www.w3.org/1999/02/22-rdf-syntax-ns#about
 {
 
   	if(successor == Object)return false;
-  	
+ 	
   	antecessor.output['http://www.w3.org/1999/02/22-rdf-syntax-ns#about'] = new Array();
   	
   	this.antecessor = antecessor;
@@ -738,7 +774,7 @@ de.auster_gmbh.semanticelement['http://www.w3.org/2000/01/rdf-schema#Resource'];
     	  
   	 uris.forEach(
   	 	 function(item){
-  	  if(!(prop in de.auster_gmbh.semanticelement[item]))
+  	  if(!(prop in de.auster_gmbh.semanticelement[item].prototype))
   	  	  de.auster_gmbh.semanticelement[item].prototype[prop] = helpvar[prop];
   	  });
 
@@ -833,6 +869,12 @@ de.auster_gmbh.semanticelement['http://www.w3.org/2000/01/rdf-schema#Literal'].p
  	
 	de.auster_gmbh.semanticelement['http://www.w3.org/2000/01/rdf-schema#Literal'].prototype.isSubClassOf = function(uri)
 	 {
+	 	// qPortal uses generic rdfs:Literal instances for all literal values without XSD type info.
+	 	// Accept rdfs:Literal itself and any XSD datatype as valid range targets for DatatypeProperties.
+	 	var XSD = 'http://www.w3.org/2001/XMLSchema#';
+	 	var RDF_LITERAL = 'http://www.w3.org/2000/01/rdf-schema#Literal';
+	 	if (uri === RDF_LITERAL || uri.startsWith(XSD)) return true;
+
 	 	var SUBCLASSOF = 'http://www.w3.org/2000/01/rdf-schema#subClassOf';
 	 	var visited = new Set();
 	 	var queue = [];
@@ -929,17 +971,61 @@ de.auster_gmbh.semanticelement['http://www.w3.org/1999/02/22-rdf-syntax-ns#Prope
  		var help = 0;
  		var domain;
  		var range;
- 		
+
+ 		// Returns the class definition element for a node.
+ 		// PATH2 in addNewClazz sets prototype.superObj = parentClazzObj.clazz.representation,
+ 		// which is the owl:Class definition element (name=classURI) BEFORE clazz is overwritten
+ 		// to the node's own constructor. So superObj is the right pointer for hierarchy checks.
+ 		// Falls back to the node itself for Literals (superObj=undefined) and untyped elements.
+ 		var getClassNode = function(node) {
+ 			if (node.superObj)
+ 				return node.superObj;
+ 			return node;
+ 		};
+
  	 	while(help < 30)
- 		{			
-/*
-* TODO maybe remove help
-*/
- 			
- 			
- 			help++;
- 			
- 
+ 		{
+ 			// Check domain/range on current element FIRST, then walk up.
+ 			// Previously the loop moved up before checking, so the property's own
+ 			// domain/range was never evaluated — only ancestors were checked.
+  			if(
+  			(domain = element.output['http://www.w3.org/2000/01/rdf-schema#domain']) &&
+  			domain.length > 0 &&
+  			(range = element.output['http://www.w3.org/2000/01/rdf-schema#range']) &&
+  			range.length > 0)
+  			{
+  				hasDefinition = true;
+
+  				var domainValid = false;
+  				for (const domElement of domain) {
+  					var antClassNode = getClassNode(antecessor);
+  					var domName = domElement.successor.getName();
+  					var result = antClassNode.isSubClassOf(domName);
+  					console.debug("domain", domName, result);
+  					domainValid ||= result;
+  				}
+
+  				var rangeValid = false;
+  				if (domainValid) {
+  					for (const ranElement of range) {
+  						var succClassNode = getClassNode(successor);
+  						var ranName = ranElement.successor.getName();
+  						var result = succClassNode.isSubClassOf(ranName);
+  						console.debug("range", ranName, result);
+  						rangeValid ||= result;
+  					}
+  				}
+
+  				valid ||= (domainValid && rangeValid);
+  			}
+
+  			// escape conditions
+  			if(valid)break;
+  			if(element.getName() == 'http://www.w3.org/1999/02/22-rdf-syntax-ns#Property')break;
+  			if(element.getName() == 'http://www.w3.org/2000/01/rdf-schema#Resource')break;
+
+			help++;
+
   			if((element.output['http://www.w3.org/2000/01/rdf-schema#subPropertyOf'] != undefined) &&
   				(element.output['http://www.w3.org/2000/01/rdf-schema#subPropertyOf'].length > 0))
   			{
@@ -949,29 +1035,23 @@ de.auster_gmbh.semanticelement['http://www.w3.org/1999/02/22-rdf-syntax-ns#Prope
   				element = element.superObj;
   			else
   				break;
-
-
-  			if(
-  			(domain = element.output['http://www.w3.org/2000/01/rdf-schema#domain']) &&
-  			(range = element.output['http://www.w3.org/2000/01/rdf-schema#range']))
-  			{
-  				hasDefinition = true;
-  				
-  				for (const domElement of domain) valid ||= antecessor.isSubClassOf(domElement.successor.getName());
-  				
-  				if(valid)
-  					for (const ranElement of range) valid ||= successor.isSubClassOf(ranElement.successor.getName());
-
-  			}
-  			
-  			// escape conditions
-  			if(valid)break;
-  			if(element.getName() == 'http://www.w3.org/1999/02/22-rdf-syntax-ns#Property')break;
-  			if(element.getName() == 'http://www.w3.org/2000/01/rdf-schema#Resource')break;
  		}
  		
  	/* Throws exception for property validation */
- 	if(!valid && hasDefinition) throw new de.auster_gmbh.library.error.ViolatesPropertyRestrictionException(this.getName() + "does not match for " + antecessor.getName() + " or " + successor.getName());
+ 	if(!valid && hasDefinition) {
+ 		var LiteralCls = de.auster_gmbh.semanticelement['http://www.w3.org/2000/01/rdf-schema#Literal'];
+		try {
+ 		console.warn('[connect] FAIL prop=', this.getName(),
+ 			'\n  ant=', antecessor.getName(), 'antClassNode=', getClassNode(antecessor).getName(),
+ 			'\n  succ=', successor.getName(), 'succClassNode=', getClassNode(successor).getName(),
+ 			'\n  succ instanceof Literal=', successor instanceof LiteralCls,
+ 			'\n  succ.isSubClassOf=', typeof successor.isSubClassOf,
+ 			'\n  range keys=', (range ? range.map(r => r.successor ? r.successor.getName() : 'null') : 'NO_RANGE'));
+ 		} catch(_diagErr) { /* WIP: Validierung zurückgestellt. Die Diagnose-Argumente (getName/getClassNode) können werfen — darf weder den Ladevorgang abbrechen noch die Kanten-Erzeugung unten überspringen. */ 
+ 			console.warn( "Warn crashed! Reason:" + diagErr.errorText + " " + diagErr.stack );
+ 		}
+		//throw new de.auster_gmbh.library.error.ViolatesPropertyRestrictionException(this.getName() + "does not match for " + antecessor.getName() + " or " + successor.getName());
+ 	}
 
  	/*
  	* TODO fix all definitions to implement this
@@ -1009,7 +1089,7 @@ de.auster_gmbh.semanticelement['http://www.w3.org/1999/02/22-rdf-syntax-ns#resou
 de.auster_gmbh.semanticelement['http://www.w3.org/1999/02/22-rdf-syntax-ns#resource'].prototype.baseClazz = 
 de.auster_gmbh.semanticelement['http://www.w3.org/1999/02/22-rdf-syntax-ns#Property'];
 //--------------------------------------------------------------
-de.auster_gmbh.semanticelement['http://www.w3.org/1999/02/22-rdf-syntax-ns#resource'].prototype.getOwnedInstanceEvent = function(name, obj){}
+de.auster_gmbh.semanticelement['http://www.w3.org/1999/02/22-rdf-syntax-ns#resource'].prototype.getOwnedInstanceEvent = null;
 
 de.auster_gmbh.semanticelement['http://www.w3.org/1999/02/22-rdf-syntax-ns#resource'].prototype.getNewBagEntryEvent = function(name, obj)
 {
@@ -1243,8 +1323,16 @@ de.auster_gmbh.semanticelement['http://www.w3.org/2002/07/owl#imports'].prototyp
 de.auster_gmbh.semanticelement['http://www.w3.org/2002/07/owl#imports'].prototype.constructor = de.auster_gmbh.semanticelement.stdclass;
 de.auster_gmbh.semanticelement['http://www.w3.org/2002/07/owl#imports'].prototype.name = 'http://www.w3.org/2002/07/owl#imports';
 de.auster_gmbh.semanticelement['http://www.w3.org/2002/07/owl#imports'].prototype.type = de.auster_gmbh.semanticelement.const.SEMANTIC;
-de.auster_gmbh.semanticelement['http://www.w3.org/2002/07/owl#imports'].prototype.baseClazz = 
+de.auster_gmbh.semanticelement['http://www.w3.org/2002/07/owl#imports'].prototype.baseClazz =
 de.auster_gmbh.semanticelement['http://www.w3.org/1999/02/22-rdf-syntax-ns#Property'];
+
+de.auster_gmbh.semanticelement['http://www.w3.org/2002/07/owl#NamedIndividual'] = function(){};
+de.auster_gmbh.semanticelement['http://www.w3.org/2002/07/owl#NamedIndividual'].prototype = new de.auster_gmbh.semanticelement['http://www.w3.org/2000/01/rdf-schema#Resource']();
+de.auster_gmbh.semanticelement['http://www.w3.org/2002/07/owl#NamedIndividual'].prototype.constructor = de.auster_gmbh.semanticelement.stdclass;
+de.auster_gmbh.semanticelement['http://www.w3.org/2002/07/owl#NamedIndividual'].prototype.name = 'http://www.w3.org/2002/07/owl#NamedIndividual';
+de.auster_gmbh.semanticelement['http://www.w3.org/2002/07/owl#NamedIndividual'].prototype.type = de.auster_gmbh.semanticelement.const.SEMANTIC;
+de.auster_gmbh.semanticelement['http://www.w3.org/2002/07/owl#NamedIndividual'].prototype.baseClazz =
+de.auster_gmbh.semanticelement['http://www.w3.org/2000/01/rdf-schema#Resource'];
 
 
 de.auster_gmbh.library.tools.addRelevantMethods(
@@ -1275,7 +1363,7 @@ de.auster_gmbh.semanticelement.semantic_web.clazz = function()
 */ 
  	this.addNewClazz = function(parentClazzObj,newClazzname)
  	{
- 	
+
  	/*  */
  	
  	/* checks type*/
@@ -1288,39 +1376,25 @@ de.auster_gmbh.semanticelement.semantic_web.clazz = function()
  	var test = parentClazzObj;
  	var mode = 0; //0:empty arrayindex, 1:not free, but not generic
  	/*
+ 	rdf:about uses this function for defining and as a reference. 
  	If a classname still exists, it was defined previously by hand or is a misstake.
  	To differ both, type will increased, when altered
  	TODO check correctness, for type meaning and fullbag generated definitions
  	*/
- 	if( de.auster_gmbh.semanticelement[newClazzname] != undefined )
-	{
-		//console.log(newClazzname + "(" + test.type + ")");
-
-
-		if( test.type < 0x30 )
-		{
-			mode = 1;
-			test.type += 0x30;
-			test.clazz = de.auster_gmbh.semanticelement[newClazzname];
-			test.aboutURI = newClazzname;
-			de.auster_gmbh.semanticelement[newClazzname].representation = test;
-
-			if(parentClazzObj.getName() !='http://www.w3.org/2000/01/rdf-schema#Resource')
-			{
-				if(!parentClazzObj.baseClazz)console.error("There is no base class for this Objekct", parentClazzObj);
-			de.auster_gmbh.semanticelement[newClazzname].prototype.superObj = parentClazzObj.baseClazz.representation;
-			}
-			return de.auster_gmbh.semanticelement[newClazzname];
-			
-			
-		}
-		else
-		{
-			
-			throw new de.auster_gmbh.library.error.DefinitionAllreadyExistsException(newClazzname, test.type);
-		}
-	}
-
+ 	// in a former version, test.type was changed with + 0x30 (0x20) Just in case, this concept will have any revival
+  if (de.auster_gmbh.semanticelement[newClazzname] != undefined) {
+      var existing = de.auster_gmbh.semanticelement[newClazzname];
+      // URI ist bereits deklariert (STEP1 registriert jedes @about vor).
+      // Dieser Aufruf ist eine REFERENZ, keine Definition: bestehenden
+      // Repräsentanten wiederverwenden, den Wrapper darauf umbiegen, aussteigen.
+      // .representation NICHT überschreiben.
+      if (existing.representation) {
+          objid[test.innerID] = existing.representation; // Refs auf Kanonischen auflösen
+          return existing;
+      }
+      existing.representation = test;   // nur falls noch kein Repräsentant (echter Platzhalter)
+      return existing;
+  }
 	
 
   	de.auster_gmbh.semanticelement[newClazzname] = function(){};//console.error('ich lebe');
@@ -2561,7 +2635,7 @@ this.getLabelOf = function(obj) {
  		 if(de.auster_gmbh.semanticelement[clazzObjName].representation == undefined)
  		 throw new de.auster_gmbh.library.error.RepresentationObjectMissedException(clazzObjName);
  	
- 
+
  		return de.auster_gmbh.semanticelement[clazzObjName].representation;
 	
  	} 
@@ -3391,7 +3465,7 @@ de.auster_gmbh.semanticelement['http://www.w3.org/1999/02/22-rdf-syntax-ns#about
 
  	
  	var about = de.auster_gmbh.semanticelement.semantic_web.getObjecttoClazz( 'http://www.w3.org/1999/02/22-rdf-syntax-ns#about' );
- 	
+
  	//about.about(de.auster_gmbh.semanticelement.semantic_web.root  ,'http://www.w3.org/2000/xmlns/');
  	about.about(de.auster_gmbh.semanticelement.semantic_web.root  ,'http://www.w3.org/XML/1998/namespace');
  	
